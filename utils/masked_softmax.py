@@ -13,11 +13,14 @@ class MaskedSoftmax(nn.Module):
 
     def forward(self, input, mask=None):
         if mask is None:
-            mask = torch.ones_like(input)
+            mask = torch.ones_like(input).long()
         if mask.dim() == input.dim()-1:
             # in case of mask may not be padded in hidden feature space
             mask = mask.unsqueeze(-1).expand(input.shape)
-        assert mask.shape == input.shape, "Mask shape %s should match input shape %s" % (mask.shape, input.shape)
+        if input.is_cuda:
+            mask = mask.cuda()
+
+        assert mask.shape == input.shape and mask.dtype == torch.short, "Mask shape %s should match input shape %s" % (mask.shape, input.shape)
         input.masked_fill_(mask == 0, -1e9)
         input = self.softmax(input)
         return input
@@ -26,5 +29,5 @@ class MaskedSoftmax(nn.Module):
 if __name__ == "__main__":
     model = MaskedSoftmax(dim=1)
     mask = torch.rand(3, 5) >= 0.5
-    print(mask)
-    print(model(torch.rand(3, 5, 2), mask))
+    mask = mask.short()
+    print(model(torch.rand(3, 5, 2).cuda(), mask))

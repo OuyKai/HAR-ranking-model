@@ -28,9 +28,9 @@ class CrossAttention(nn.Module):
         shape = (batch_size, self.document_length, self.query_length, self.hidden_size)
 
         if q_mask is None:
-            q_mask = torch.ones(batch_size, self.query_length)
+            q_mask = torch.ones(batch_size, self.query_length).short()
         if d_mask is None:
-            d_mask = torch.ones(batch_size, self.document_length)
+            d_mask = torch.ones(batch_size, self.document_length).short()
 
         assert q_mask.shape == (batch_size, self.query_length)
         assert d_mask.shape == (batch_size, self.document_length)
@@ -59,14 +59,39 @@ class CrossAttention(nn.Module):
         return V_d
 
 
-if __name__ == "__main__":
+class InnerAttention(nn.Module):
+    """
+    self attention mechanism 1
+    """
+    def __init__(self, hidden_size, attn_size):
+        super(InnerAttention, self).__init__()
 
+        self.W = nn.Linear(hidden_size, attn_size)
+        nn.init.kaiming_normal_(self.W.weight)
+
+        self.wc = nn.Linear(attn_size, 1)
+        nn.init.kaiming_normal_(self.wc.weight)
+        self.tanh = nn.Tanh()
+        self.softmax = MaskedSoftmax(dim=-1)
+
+    def forward(self, U, mask=None):
+        attn = self.wc(self.tanh(self.W(U))).squeeze(-1)  # (B, length)
+        attn = self.softmax(attn, mask)
+        return attn
+
+
+if __name__ == "__main__":
     # CrossAttention test
-    model = CrossAttention(32, 10, 12)
+    cross_model = CrossAttention(32, 10, 12)
     U_d = torch.rand(6, 12, 32)
     U_q = torch.rand(6, 10, 32)
-    print(model(U_d, U_q).shape)
+    d_mask = torch.rand(6, 12) > 0.3
+    d_mask = d_mask.short()
+    print(cross_model(U_d, U_q, d_mask=d_mask)[0])
 
+    # InnerAttention test
+    inner_model = InnerAttention(32, 20)
+    print(inner_model(U_d, d_mask))
 
 
 
