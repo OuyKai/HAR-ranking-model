@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+
 from utils.masked_softmax import MaskedSoftmax
 
 
@@ -124,6 +124,8 @@ if __name__ == "__main__":
     d_mask = d_mask.short()
     q_mask = torch.rand(6, 10) > 0.2
     q_mask = q_mask.short()
+    sent_mask = torch.rand(6, 4) > 0.15
+    sent_mask = sent_mask.short()
     # print(cross_model(U_d, U_q, d_mask=d_mask)[0])
 
     # InnerAttention test
@@ -131,7 +133,7 @@ if __name__ == "__main__":
     print(inner_model(U_q, q_mask).shape)
 
     model = DocumentHierachicalInnerAttention(32, 10, 12, 20).cuda()
-    print(model(U_d, U_q, d_mask=d_mask, q_mask=q_mask).shape)
+    print(model(U_d, U_q, d_mask=d_mask, q_mask=q_mask, sent_mask=sent_mask).shape)
 
 
 
