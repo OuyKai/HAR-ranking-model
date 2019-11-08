@@ -1,8 +1,13 @@
+import sys
+
 import torch
 import torch.nn as nn
 
+sys.path.append("..")
+
 from har.attentions import InnerAttention, DocumentHierachicalInnerAttention
 from utils.score_layer import ScoreLayer
+from har.encoders import GRUEncoder
 
 
 class Har(nn.Module):
@@ -35,9 +40,29 @@ class Har(nn.Module):
         return score
 
 
+class HarEncoder(nn.Module):
+    def __init__(self, embedding_size, hidden_size,
+                 sentence_num, query_length,
+                 document_length, d_attn_size,
+                 q_attn_size, dropout):
+        super(HarEncoder, self).__init__()
+        assert hidden_size % 2 == 0
+        self.q_encoder = GRUEncoder(embedding_size, hidden_size//2, dropout)
+        self.d_encoder = GRUEncoder(embedding_size, hidden_size//2, dropout)
+        self.har = Har(hidden_size, sentence_num, query_length,
+                       document_length, d_attn_size, q_attn_size)
+
+    def forward(self, E_d, E_q, d_mask=None, q_mask=None, sent_mask=None):
+        U_q = self.q_encoder(E_q)
+        U_d = self.d_encoder(E_d)
+        score = self.har(U_d, U_q, d_mask, q_mask, sent_mask)
+        return score
+
+
 if __name__ == "__main__":
     # Har test
     har = Har(32, 4, 10, 12, 20, 20).cuda()
+
     U_d = torch.rand(6, 4, 12, 32).cuda()
     U_q = torch.rand(6, 10, 32).cuda()
     d_mask = torch.rand(6, 4, 12) > 0.3
@@ -46,6 +71,11 @@ if __name__ == "__main__":
     q_mask = q_mask.short()
     sent_mask = torch.rand(6, 4) > 0.15
     sent_mask = sent_mask.short()
+    # print(har(U_d, U_q, d_mask=d_mask, q_mask=q_mask, sent_mask=sent_mask))
 
-    print(har(U_d, U_q, d_mask=d_mask, q_mask=q_mask, sent_mask=sent_mask))
+    # HarEncoder test
+    model = HarEncoder(50, 32, 4, 10, 12, 20, 20, 0.1).cuda()
+    E_d = torch.rand(6, 4, 12, 50).cuda()
+    E_q = torch.rand(6, 10, 50).cuda()
+    print(model(E_d, E_q, d_mask=d_mask, q_mask=q_mask, sent_mask=sent_mask))
 
