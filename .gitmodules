@@ -1,0 +1,3 @@
+[submodule "embedding/THULAC"]
+	path = embedding/THULAC
+	url = https://github.com/ramosmy/THULAC.so
