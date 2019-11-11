@@ -1,17 +1,13 @@
 import sys
-
 import torch
 import torch.nn as nn
-
 sys.path.append("..")
-
 from har.attentions import InnerAttention, DocumentHierachicalInnerAttention
 from utils.score_layer import ScoreLayer
 from har.encoders import GRUEncoder
 
 
 class Har(nn.Module):
-
     def __init__(self, hidden_size, sentence_num, query_length, document_length, d_attn_size, q_attn_size):
         super(Har, self).__init__()
         self.hidden_size = hidden_size
