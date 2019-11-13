@@ -1,10 +1,12 @@
 import sys
-import torch
+
 import torch.nn as nn
+
 sys.path.append("..")
 from har.attentions import InnerAttention, DocumentHierachicalInnerAttention
 from utils.score_layer import ScoreLayer
 from har.encoders import GRUEncoder
+from embedding.fasttext_embedding import Embedder
 
 
 class Har(nn.Module):
@@ -57,21 +59,39 @@ class HarEncoder(nn.Module):
 
 if __name__ == "__main__":
     # Har test
-    har = Har(32, 4, 10, 12, 20, 20).cuda()
-
-    U_d = torch.rand(6, 4, 12, 32).cuda()
-    U_q = torch.rand(6, 10, 32).cuda()
-    d_mask = torch.rand(6, 4, 12) > 0.3
-    d_mask = d_mask.short()
-    q_mask = torch.rand(6, 10) > 0.2
-    q_mask = q_mask.short()
-    sent_mask = torch.rand(6, 4) > 0.15
-    sent_mask = sent_mask.short()
+    # har = Har(32, 4, 10, 12, 20, 20).cuda()
+    #
+    # U_d = torch.rand(6, 4, 12, 32).cuda()
+    # U_q = torch.rand(6, 10, 32).cuda()
+    # d_mask = torch.rand(6, 4, 12) > 0.3
+    # d_mask = d_mask.short()
+    # q_mask = torch.rand(6, 10) > 0.2
+    # q_mask = q_mask.short()
+    # sent_mask = torch.rand(6, 4) > 0.15
+    # sent_mask = sent_mask.short()
     # print(har(U_d, U_q, d_mask=d_mask, q_mask=q_mask, sent_mask=sent_mask))
 
     # HarEncoder test
-    model = HarEncoder(50, 32, 4, 10, 12, 20, 20, 0.1).cuda()
-    E_d = torch.rand(6, 4, 12, 50).cuda()
-    E_q = torch.rand(6, 10, 50).cuda()
-    print(model(E_d, E_q, d_mask=d_mask, q_mask=q_mask, sent_mask=sent_mask))
+    # model = HarEncoder(50, 32, 4, 10, 12, 20, 20, 0.1).cuda()
+    # E_d = torch.rand(6, 4, 12, 50).cuda()
+    # E_q = torch.rand(6, 10, 50).cuda()
+    # print(model(E_d, E_q, d_mask=d_mask, q_mask=q_mask, sent_mask=sent_mask))
+
+    # Embedder test
+    embedder = Embedder(max_num_sent=6, max_seq_len=30, model_path="../embedding/model/model.bin")
+    embedding_size = embedder.dim
+    hidden_size = 60
+    sentence_num = 6
+    query_length = 30
+    document_length = 30
+    d_attn_size = 50
+    q_attn_size = 50
+    model = HarEncoder(embedding_size, hidden_size, sentence_num, query_length, document_length,
+                       d_attn_size, q_attn_size, 0.1)
+    E_d, d_words, d_mask, s_mask = embedder.batch_embed(["我在说什么！", "你好啊！", "是的呢！"])
+    E_q, q_words, q_mask = embedder.embed("我说的不算数！")
+    E_d, E_q, d_mask, q_mask, s_mask = map(lambda l: l.unsqueeze(0), [E_d, E_q, d_mask, q_mask, s_mask])
+    print(model(E_d, E_q, d_mask, q_mask, s_mask))
+
+
 
