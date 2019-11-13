@@ -55,8 +55,8 @@ def embedding(model_path):
 
 
 class Embedder():
-    def __init__(self, max_num_sent, max_seq_len):
-        self.model = fasttext.load_model("model/model.bin")
+    def __init__(self, max_num_sent, max_seq_len, model_path="model/model.bin"):
+        self.model = fasttext.load_model(model_path)
         self.dim = self.model.get_dimension()
         self.tokenizer = THULAC()
         self.max_seq_len = max_seq_len
@@ -74,7 +74,8 @@ class Embedder():
 
     def batch_embed(self, sentences):
         container = torch.zeros(self.max_num_sent, self.max_seq_len, self.dim)
-        mask = torch.zeros(self.max_num_sent, self.max_seq_len)
+        mask = torch.zeros(self.max_num_sent, self.max_seq_len).short()
+        s_mask = torch.zeros(self.max_num_sent).short()
         span_sents = min(len(sentences), self.max_num_sent)
         words = []
         for i in range(span_sents):
@@ -82,9 +83,9 @@ class Embedder():
             container[i, :, :] = sent_container
             mask[i, :] = sent_mask
             words.append(sent_words)
-        return container, words, mask
+            s_mask[i] = 1
 
-
+        return container, words, mask, s_mask
 
 
 if __name__ == "__main__":
