@@ -1,3 +1,4 @@
 torch==1.2.0
 fasttext==0.9.1
 tqdm==4.36.1
+pandas==0.25.3
