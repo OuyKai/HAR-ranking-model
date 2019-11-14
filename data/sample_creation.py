@@ -10,7 +10,7 @@ def create_sample():
                     "预订牛油果眼霜 28g，即可获得4件K星礼：",
                     "1.金盏花爽肤水 40ml*12.金盏花精华水活霜 7ml*1",
                     "3.金盏花清透洁面啫喱 30ml*14.限量【限定K星环保袋】*1"]]
-    sample_docs = [json.dumps([i]*5) for i in sample_docs]
+    sample_docs = [json.dumps([i]*5) for i in sample_docs]  # using json to store list of docs
     d = {"queries": queries, "docs": sample_docs}
     df = pd.DataFrame(data=d)
     df.to_csv("sample/sample.csv")

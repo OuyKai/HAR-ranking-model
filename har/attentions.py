@@ -105,10 +105,10 @@ class DocumentHierachicalInnerAttention(nn.Module):
         U_d = U_d.view(batch_size*sentence_num, self.document_length, self.hidden_size)
         U_q = U_q.unsqueeze(1).expand((batch_size, sentence_num, self.query_length, self.hidden_size))
         U_q = U_q.reshape(-1, self.query_length, self.hidden_size)
-
         V_d = self.cross_attn(U_d, U_q, d_mask, q_mask)
 
         alpha_d = self.sent_inner_attn(V_d, d_mask)  # (batch_size * sentence_num, 4H)
+
         alpha_d = alpha_d.view(batch_size, sentence_num, -1)
 
         y_d = self.doc_inner_attn(alpha_d, sent_mask)
