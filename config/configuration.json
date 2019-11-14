@@ -1,0 +1,9 @@
+{
+  "embedding_size": 100,
+  "hidden_size": 60,
+  "sentence_num": 6,
+  "query_length": 30,
+  "document_length":30,
+  "d_attn_size": 50,
+  "q_attn_size": 50
+}
