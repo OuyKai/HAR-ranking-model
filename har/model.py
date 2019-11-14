@@ -7,6 +7,8 @@ from har.attentions import InnerAttention, DocumentHierachicalInnerAttention
 from utils.score_layer import ScoreLayer
 from har.encoders import GRUEncoder
 from embedding.fasttext_embedding import Embedder
+from data.har_data import HarData
+from torch.utils.data import DataLoader
 
 
 class Har(nn.Module):
@@ -44,17 +46,42 @@ class HarEncoder(nn.Module):
                  document_length, d_attn_size,
                  q_attn_size, dropout):
         super(HarEncoder, self).__init__()
+        self.embedding_size = embedding_size
+        self.hidden_size = hidden_size
+        self.document_length = document_length
+        self.query_length = query_length
+        self.sentence_num = sentence_num
         assert hidden_size % 2 == 0
         self.q_encoder = GRUEncoder(embedding_size, hidden_size//2, dropout)
         self.d_encoder = GRUEncoder(embedding_size, hidden_size//2, dropout)
         self.har = Har(hidden_size, sentence_num, query_length,
                        document_length, d_attn_size, q_attn_size)
 
-    def forward(self, E_d, E_q, d_mask=None, q_mask=None, sent_mask=None):
+    def forward(self, E_d, E_q, d_mask=None, q_mask=None, sent_mask=None, use_pair=False):
+        if use_pair:
+            # E_d dimension 5, shape (batch_size, doc_number, max_num_sent, max_seq_len, embedding_size)
+            # E_q dimension 3, shape (batch_size, max_seq_len, embedding_size)
+            doc_number = E_d.shape[1]
+            batch_size = E_d.shape[0]
+            E_q = E_q.unsqueeze(1).expand(batch_size, doc_number, self.query_length, self.embedding_size)
+            E_d = E_d.reshape(batch_size*doc_number, -1, self.document_length, self.embedding_size)
+            E_q = E_q.reshape(batch_size*doc_number, -1, self.embedding_size)
+            if q_mask is not None:
+                q_mask = q_mask.unsqueeze(1).expand(batch_size, doc_number, self.query_length)
+                q_mask = q_mask.reshape(-1, self.query_length)
+            if d_mask is not None:
+                d_mask = d_mask.reshape(-1, self.sentence_num, self.document_length)
+            if sent_mask is not None:
+                sent_mask = sent_mask.reshape(-1, self.sentence_num)
+            # E_d dimension 4, shape (batch_size*doc_number, max_num_sent, max_seq_len, embedding_size)
+            # E_q dimension 3, shape (batch_size*doc_number, max_seq_len, embedding_size)
         U_q = self.q_encoder(E_q)
         U_d = self.d_encoder(E_d)
+        # score shape (batch_size * doc_number, 1) if use_pair else (batch_size, 1)
         score = self.har(U_d, U_q, d_mask, q_mask, sent_mask)
-        return score
+        if use_pair:
+            score = score.view(batch_size, doc_number, -1)
+        return score.squeeze(-1)
 
 
 if __name__ == "__main__":
@@ -88,10 +115,17 @@ if __name__ == "__main__":
     q_attn_size = 50
     model = HarEncoder(embedding_size, hidden_size, sentence_num, query_length, document_length,
                        d_attn_size, q_attn_size, 0.1)
-    E_d, d_words, d_mask, s_mask = embedder.batch_embed(["我在说什么！", "你好啊！", "是的呢！"])
-    E_q, q_words, q_mask = embedder.embed("我说的不算数！")
-    E_d, E_q, d_mask, q_mask, s_mask = map(lambda l: l.unsqueeze(0), [E_d, E_q, d_mask, q_mask, s_mask])
-    print(model(E_d, E_q, d_mask, q_mask, s_mask))
+    # E_d, d_words, d_mask, s_mask = embedder.batch_embed(["我在说什么！", "你好啊！", "是的呢！"])
+    # E_q, q_words, q_mask = embedder.embed("我说的不算数！")
+    # E_d, E_q, d_mask, q_mask, s_mask = map(lambda l: l.unsqueeze(0), [E_d, E_q, d_mask, q_mask, s_mask])
+    # print(model(E_d, E_q, d_mask, q_mask, s_mask))
 
+    criterion = nn.MultiMarginLoss()
+    data = HarData("../data/sample/sample.csv", 6, 30, "../embedding/model/model.bin")
+    dataloader = DataLoader(dataset=data, batch_size=2, shuffle=True)
+    for batch_idx, batch_data in enumerate(dataloader):
+        E_d, E_q, d_mask, q_mask, s_mask, labels, d_words, q_words = batch_data
+        out = model(E_d, E_q, d_mask, q_mask, s_mask, use_pair=True)
+        print(criterion(out,labels))
 
 
