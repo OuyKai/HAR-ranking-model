@@ -126,6 +126,6 @@ if __name__ == "__main__":
     for batch_idx, batch_data in enumerate(dataloader):
         E_d, E_q, d_mask, q_mask, s_mask, labels, d_words, q_words = batch_data
         out = model(E_d, E_q, d_mask, q_mask, s_mask, use_pair=True)
-        print(criterion(out,labels))
+        print(criterion(out, labels))
 
 
