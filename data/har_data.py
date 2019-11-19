@@ -37,7 +37,7 @@ class HarData(Dataset):
             d_mask_container[i, :, :] = d_mask
             s_mask_container[i, :] = s_mask
             words_list.append(d_words)
-        label = 1
+        label = 0
         return E_d_container, E_q, d_mask_container, q_mask, s_mask_container, label, words_list, q_words
 
     def __len__(self):
